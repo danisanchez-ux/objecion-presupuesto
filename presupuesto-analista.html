@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Presupuesto analista - Assetplan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+            },
+            colors: {
+              apBlue: {
+                50: "#eff6ff",
+                100: "#dbeafe",
+                600: "#2563eb",
+                700: "#1d4ed8",
+              },
+              apGray: {
+                50: "#f5f5f5",
+                100: "#e5e7eb",
+                300: "#c3c3c3",
+                500: "#6b7280",
+                600: "#4b5563",
+                800: "#1f2937",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .actions-panel {
+        width: 300px;
+        flex: 0 0 300px;
+      }
+
+      .actions-panel__header {
+        background: linear-gradient(180deg, #4f5f9f 0%, #37426f 100%);
+        border-radius: 8px 8px 0 0;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 20px;
+        padding: 12px 24px;
+      }
+
+      .actions-panel__body {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-top: 0;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+        overflow: hidden;
+      }
+
+      .actions-panel__item {
+        align-items: center;
+        background: #ffffff;
+        border: 0;
+        border-bottom: 1px solid #e5e7eb;
+        color: #374151;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        gap: 12px;
+        min-height: 56px;
+        padding: 0 24px;
+        text-align: left;
+        transition: background 0.15s ease;
+        width: 100%;
+      }
+
+      .actions-panel__item:last-child {
+        border-bottom: 0;
+      }
+
+      .actions-panel__item:hover {
+        background: #f9fafb;
+      }
+
+      .actions-panel__icon {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        flex: 0 0 16px;
+        height: 16px;
+        width: 16px;
+      }
+
+      .actions-panel__label {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+      }
+
+      @media (max-width: 1280px) {
+        .actions-panel {
+          flex-basis: 100%;
+          max-width: 882px;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-white font-sans text-apGray-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const assets = {
+        topbar: "assets/figma-topbar.png",
+        photo: "assets/figma-photo.png",
+        hammer: "assets/figma-hammer.svg",
+        warning: "assets/figma-warning.svg",
+        info: "assets/figma-info.svg",
+        trash: "assets/figma-trash.svg",
+      };
+
+      const repairsRequired = [
+        ["Aseo general básico", "Todo está lleno de polvo y es necesario limpiar.", "c/u", "1", "$35.000", "$35.000"],
+        ["Pintura para paredes", "Hay que pintar los muros/techos completos.", "g/l", "13", "$48.790", "$126.700"],
+        ["Ajuste puerta mueble cocina", "Hay un closet manchado.", "ml", "35", "$27.300", "$390.000"],
+      ];
+
+      const repairsOptional = [
+        ["Puerta pintura", "Se necesita pintar todas las puertas del depto.", "g/l", "10", "$12.000", "$5.000"],
+        ["Cambio sellos silicona baño y cocina", "La mayoría de los sellos están dañados.", "c/u", "4", "$5.790", "$50.700"],
+        ["Mantención de piso cerámica", "Algunas losas están rotas.", "c/u", "7", "$7.300", "$86.600"],
+      ];
+
+      const quotes = [
+        ["Construcciones Bob SpA", "2 días", "3 días", "DD-MM-AAAA", "Ver detalle"],
+        ["Mr. Service SpA", "-", "-", "-", "Pendiente"],
+        ["DyH Cleaning SpA", "-", "-", "-", "Pendiente"],
+        ["SD Soluciones SpA", "4 días", "2 días", "DD-MM-AAAA", "Ver detalle"],
+        ["Grupo Mejora SpA", "-", "-", "-", "Pendiente"],
+      ];
+
+      function Badge({ children, tone = "blue", className = "" }) {
+        const tones = {
+          blue: "bg-apBlue-600 text-white",
+          dark: "bg-apGray-600 text-white",
+          gray: "bg-apGray-500 text-white",
+          yellow: "bg-[#fcd34d] text-[#78350f]",
+        };
+        return (
+          <span className={`inline-flex h-6 items-center justify-center rounded-full px-3 text-center text-sm font-medium leading-5 ${tones[tone]} ${className}`}>
+            {children}
+          </span>
+        );
+      }
+
+      function Button({ children, variant = "primary", icon }) {
+        const variants = {
+          primary: "bg-apBlue-600 text-white",
+          secondary: "bg-apBlue-100 text-apBlue-600",
+          outline: "border border-apBlue-600 bg-white text-apBlue-600",
+        };
+        return (
+          <button className={`inline-flex h-9 items-center justify-center gap-2 rounded px-3 py-2 text-sm font-medium leading-5 ${variants[variant]}`}>
+            {icon && <img src={icon} alt="" className="h-5 w-5" />}
+            {children}
+          </button>
+        );
+      }
+
+      function ActionsPanel({ onOpenReviewLog }) {
+        const actions = [
+          { label: "Cambiar estado" },
+          { label: "Historial de notificaciones" },
+          { label: "Asignar reparaciones" },
+          { label: "Crear presupuesto adicional" },
+          { label: "Ver Bitácora de cambios", onClick: onOpenReviewLog },
+        ];
+
+        return (
+          <aside className="actions-panel" aria-label="Acciones del presupuesto">
+            <div className="actions-panel__header">Acciones</div>
+            <div className="actions-panel__body">
+              {actions.map((action) => (
+                <button className="actions-panel__item" type="button" key={action.label} onClick={action.onClick}>
+                  <span className="actions-panel__icon" aria-hidden="true" />
+                  <span className="actions-panel__label">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        );
+      }
+
+      function Alert({ observedCount, onEditQuotation }) {
+        if (observedCount === 0) return null;
+
+        const itemText = observedCount === 1
+          ? "Hay 1 ítem observado que requiere revisión antes de reenviar el presupuesto."
+          : `Hay ${observedCount} ítems observados que requieren revisión antes de reenviar el presupuesto.`;
+
+        return (
+          <div className="flex w-full items-start gap-2.5 rounded-md border border-[#fcd34d] bg-[#fffbeb] p-3 text-sm leading-5 text-[#7b3306]">
+            <img src={assets.warning} alt="" className="mt-0.5 h-5 w-5" />
+            <div>
+              <p className="font-semibold">Este presupuesto tiene observaciones del propietario</p>
+              <p>{itemText}</p>
+              <button className="mt-1 font-medium text-[#7b3306] underline underline-offset-2" type="button" onClick={onEditQuotation}>Editar cotización</button>
+            </div>
+          </div>
+        );
+      }
+
+      function Divider() {
+        return <div className="h-px w-full bg-[#d1d5db]" />;
+      }
+
+      function TextBox({ title, badge, prompt, value, tone }) {
+        const isBlue = tone === "blue";
+        return (
+          <section className={`w-full rounded-md px-2.5 py-3 ${isBlue ? "bg-apBlue-100" : "bg-apGray-100"}`}>
+            <div className="flex flex-col gap-2.5">
+              <h3 className={`text-lg font-semibold leading-7 ${isBlue ? "text-apBlue-700" : "text-apGray-800"}`}>{title}</h3>
+              <div className="flex items-center gap-2.5">
+                <Badge tone={isBlue ? "blue" : "gray"}>{badge}</Badge>
+                <p className="text-base leading-6 text-apGray-800">{prompt}</p>
+              </div>
+              <div className="min-h-[85px] w-full rounded-md border-2 border-[#cdd1d7] bg-white px-4 py-3 text-base leading-6 text-apGray-800 shadow-sm">
+                {value}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function SummaryCards() {
+        const left = [
+          ["Reparaciones indispensables", "$ 922.680"],
+          ["Reparaciones opcionales", "$ 250.000"],
+        ];
+        const right = [
+          ["Garantía", "$ 400.000"],
+          ["Retención", "No"],
+        ];
+        return (
+          <div className="flex gap-4 whitespace-nowrap text-base leading-[14px] text-apGray-800">
+            {[left, right].map((group, index) => (
+              <div key={index} className="flex flex-col gap-4 rounded-md bg-white p-2">
+                {group.map(([label, value]) => (
+                  <div key={label} className="flex flex-col gap-2.5">
+                    <p className="font-semibold">{label}</p>
+                    <p>{value}</p>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      function HeaderBlock() {
+        return (
+          <section className="flex w-full flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex w-full items-center gap-2">
+                <img src={assets.hammer} alt="" className="h-6 w-6 p-0.5" />
+                <h1 className="flex-1 text-xl font-semibold leading-4 text-apGray-800">Presupuesto de rotación - ID 3645</h1>
+                <Badge tone="dark">En revisión</Badge>
+              </div>
+              <p className="text-lg leading-4 text-apGray-500">Departamento 302 - Portugal 810 [OP 56455]</p>
+              <Badge className="w-auto self-start whitespace-nowrap">OP-20486</Badge>
+            </div>
+            <Divider />
+            <div className="flex w-[356px] flex-col gap-4 whitespace-nowrap">
+              <h2 className="text-xl font-semibold leading-[14px] text-apGray-800">Inspección y cotización</h2>
+              <p className="text-base leading-[14px] text-apGray-600"><strong>Creado por:</strong> Vicente Echeverría</p>
+              <p className="text-base leading-[14px] text-apGray-600"><strong>Enviado a cotizar:</strong> DD-MM-AAAA</p>
+            </div>
+            <SummaryCards />
+          </section>
+        );
+      }
+
+      function QuoteSection() {
+        return (
+          <section className="flex w-full flex-col gap-4">
+            <div className="flex items-start justify-between">
+              <h2 className="text-xl font-semibold leading-4 text-black">Cotización y ejecutores</h2>
+              <Button variant="outline" icon={assets.info}>Ver incidencias</Button>
+            </div>
+            <div className="flex flex-col gap-4 text-base leading-[14px] text-apGray-800">
+              <p><strong>Contratista asignado:</strong> Construcciones Bob SpA</p>
+              <p><strong>Envío de la orden de trabajo:</strong> 25-05-2024</p>
+            </div>
+            <div className="rounded-md bg-white px-2.5 py-3">
+              <h3 className="text-lg font-semibold leading-7">Comentario del contratista asignado</h3>
+              <p className="mt-2.5 text-base leading-6">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto.</p>
+            </div>
+            <div className="rounded-md bg-white p-4">
+              <h3 className="text-lg leading-7"><span>Se han recibido</span><strong> 2 cotizaciones </strong><span>de</span><strong> 5 contratistas invitados</strong></h3>
+              <table className="mt-6 w-full table-fixed text-left text-sm">
+                <thead className="text-base font-semibold text-apGray-800">
+                  <tr>
+                    <th className="pb-4">Contratista</th>
+                    <th className="pb-4">Inicio en</th>
+                    <th className="pb-4">Duración</th>
+                    <th className="pb-4">Respuesta</th>
+                    <th className="pb-4 text-right">Cotización</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm leading-5 text-apGray-800">
+                  {quotes.map((row) => (
+                    <tr key={row[0]} className="border-t border-apGray-100">
+                      {row.map((cell, index) => (
+                        <td key={index} className={`py-2 ${index === 4 ? "text-right text-apBlue-600" : ""}`}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      }
+
+      function QuotationRepairsTable({ rows }) {
+        const subtotal = rows
+          .filter((row) => row.status !== "deleted")
+          .reduce((total, row) => total + getRowSubtotal(row), 0);
+
+        return (
+          <div className="flex w-full flex-col gap-4">
+            <div className="w-full rounded-md bg-[#374151] p-2.5 text-lg font-semibold leading-7 text-white">Reparaciones indispensables</div>
+            <div className="grid grid-cols-[1fr_70px_74px_104px_90px] gap-5 text-base text-apGray-800">
+              {["Reparación", "Unidad", "Cantidad", "Precio unitario", "Subtotal"].map((heading) => (
+                <p key={heading} className="font-semibold leading-6">{heading}</p>
+              ))}
+              {rows.map((row) => {
+                const isDeleted = row.status === "deleted";
+                const priceChanged = String(row.unitPrice) !== String(row.original.unitPrice);
+                const quantityChanged = String(row.quantity) !== String(row.original.quantity);
+                const label = isDeleted ? "Eliminado" : priceChanged && !quantityChanged ? "Precio ajustado" : priceChanged || quantityChanged ? "Modificado" : "";
+                const mutedText = isDeleted ? "text-[#6b7280] line-through" : "";
+
+                return (
+                  <React.Fragment key={row.id}>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className={`leading-6 ${mutedText}`}>{row.repair}</p>
+                        {label && (
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4 ${isDeleted ? "bg-[#fee2e2] text-[#b91c1c]" : "bg-[#dbeafe] text-[#155dfc]"}`}>
+                            {label}
+                          </span>
+                        )}
+                      </div>
+                      {row.note && <p className="text-sm leading-5 text-apGray-500">{row.note}</p>}
+                    </div>
+                    <p className={`leading-6 ${mutedText}`}>{row.unit}</p>
+                    <p className={`leading-6 ${isDeleted ? "text-[#6b7280]" : ""}`}>{row.quantity}</p>
+                    <div className="leading-6">
+                      {priceChanged && !isDeleted && (
+                        <span className="mr-2 text-sm text-[#9ca3af] line-through">{formatCurrency(parseAmount(row.original.unitPrice))}</span>
+                      )}
+                      <span className={mutedText}>{formatCurrency(parseAmount(row.unitPrice))}</span>
+                    </div>
+                    <p className={`leading-6 ${mutedText}`}>{formatCurrency(getRowSubtotal(row))}</p>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            <Divider />
+            <div className="flex w-full items-start justify-between text-lg font-semibold leading-7">
+              <p>Subtotal indispensables</p>
+              <p>{formatCurrency(subtotal)}</p>
+            </div>
+          </div>
+        );
+      }
+
+      function RepairsTable({ title, tone, rows, subtotal }) {
+        const headerColor = tone === "dark" ? "bg-[#374151]" : "bg-[#9ca3af]";
+        return (
+          <div className="flex w-full flex-col gap-4">
+            <div className={`w-full rounded-md ${headerColor} p-2.5 text-lg font-semibold leading-7 text-white`}>{title}</div>
+            <div className="grid grid-cols-[1fr_70px_74px_104px_90px] gap-5 text-base text-apGray-800">
+              {["Reparación", "Unidad", "Cantidad", "Precio unitario", "Subtotal"].map((heading) => (
+                <p key={heading} className="font-semibold leading-6">{heading}</p>
+              ))}
+              {rows.map((row) => (
+                <React.Fragment key={row[0]}>
+                  <div>
+                    <p className="leading-6">{row[0]}</p>
+                    <p className="text-sm leading-5 text-apGray-500">{row[1]}</p>
+                  </div>
+                  <p className="leading-6">{row[2]}</p>
+                  <p className="leading-6">{row[3]}</p>
+                  <p className="leading-6">{row[4]}</p>
+                  <p className="leading-6">{row[5]}</p>
+                </React.Fragment>
+              ))}
+            </div>
+            <Divider />
+            <div className="flex w-full items-start justify-between text-lg font-semibold leading-7">
+              <p>Subtotal {tone === "dark" ? "indispensables" : "opcionales"}</p>
+              <p>{subtotal}</p>
+            </div>
+          </div>
+        );
+      }
+
+      function RepairsSection({ quotationRows }) {
+        const requiredSubtotal = quotationRows
+          .filter((row) => row.status !== "deleted")
+          .reduce((total, row) => total + getRowSubtotal(row), 0);
+        const net = requiredSubtotal;
+        const iva = net * 0.19;
+        const total = net + iva;
+
+        return (
+          <section className="flex w-full flex-col gap-6 rounded-md bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold leading-4 text-black">Lista de reparaciones</h2>
+              <Button variant="secondary">Descargar detalle</Button>
+            </div>
+            <QuotationRepairsTable rows={quotationRows} />
+            <RepairsTable title="Reparaciones opcionales" tone="gray" rows={[]} subtotal="$0" />
+            <Divider />
+            <div className="flex flex-col gap-2.5 text-lg leading-7">
+              {[
+                ["Neto", formatCurrency(net), false],
+                ["IVA", formatCurrency(iva), false],
+                ["Total", formatCurrency(total), true],
+              ].map(([label, value, total]) => (
+                <div key={label} className={`flex justify-end gap-6 ${total ? "font-semibold text-apBlue-600" : "text-apGray-800"}`}>
+                  <p>{label}</p>
+                  <p className="w-[120px] text-right">{value}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      function MediaSection() {
+        return (
+          <section className="flex w-full flex-col gap-6">
+            <h2 className="text-xl font-semibold leading-4 text-black">Fotos y videos</h2>
+            <div className="flex gap-6 overflow-hidden">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="relative h-[116px] w-[104px] shrink-0 overflow-hidden rounded-md">
+                  <img src={assets.photo} alt="" className="h-full w-full object-cover" />
+                  <span className="absolute left-0 top-0 rounded-tr-md bg-apBlue-700 p-0.5 text-sm leading-4 text-white">Antes</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      function BudgetDocument({ onEditQuotation, quotationRows }) {
+        const observedCount = quotationRows.filter((row) => row.note && row.status !== "deleted").length;
+
+        return (
+          <main className="w-[882px] shrink-0 border-8 border-apGray-300 bg-[#f5f5f5] p-8">
+            <div className="flex flex-col gap-10">
+              <Alert observedCount={observedCount} onEditQuotation={onEditQuotation} />
+              <div className="flex flex-col gap-6">
+                <HeaderBlock />
+                <TextBox
+                  tone="blue"
+                  title="Explicación al propietario y arrendatario"
+                  badge="Lo leerá el propietario y arrendatario"
+                  prompt="¿Qué es importante informarles?"
+                  value="Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto."
+                />
+                <TextBox
+                  title="Observaciones para Assetplan"
+                  badge="Lo leerá el equipo interno"
+                  prompt="¿Qué debe saber Assetplan para hacer las reparaciones?"
+                  value="Nor again is there anyone who loves or pursues or desires to obtain pain of itself, because it is pain, but because occasionally circumstances occur in which toil and pain can procure him some great."
+                />
+              </div>
+              <Divider />
+              <QuoteSection />
+              <Divider />
+              <RepairsSection quotationRows={quotationRows} />
+              <Divider />
+              <MediaSection />
+            </div>
+          </main>
+        );
+      }
+
+      function ReviewLogDocument() {
+        const events = [
+          {
+            type: "owner",
+            time: "Hoy · 14:32",
+            title: "Propietario realizó observaciones",
+            items: [
+              { name: "Pintura muro dormitorio principal", text: "El valor parece elevado." },
+              { name: "Cambio grifería cocina", text: "Quiero evaluar otra alternativa." },
+            ],
+          },
+          {
+            type: "analyst",
+            time: "Hoy · 16:10",
+            title: "Analista ajustó el presupuesto",
+            items: [
+              { name: "Pintura muro dormitorio principal", detail: ["Precio ajustado:", "Antes: $120.000", "Ahora: $85.000"] },
+              { name: "Cambio grifería cocina", text: "Eliminado del presupuesto" },
+            ],
+          },
+          {
+            type: "sent",
+            time: "Ayer · 11:42",
+            title: "Presupuesto reenviado al propietario",
+            items: [],
+          },
+        ];
+        const eventTypes = {
+          owner: {
+            icon: "!",
+            label: "Propietario",
+            className: "bg-[#fffbeb] text-[#b45309] border-[#fcd34d]",
+          },
+          analyst: {
+            icon: "✎",
+            label: "Analista",
+            className: "bg-[#eff6ff] text-[#155dfc] border-[#bfdbfe]",
+          },
+          sent: {
+            icon: "→",
+            label: "Reenvío",
+            className: "bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]",
+          },
+        };
+
+        return (
+          <main className="w-[882px] shrink-0 border-8 border-apGray-300 bg-[#f5f5f5] p-8">
+            <div className="flex flex-col gap-8">
+              <section className="rounded-md bg-white p-6">
+                <h1 className="text-2xl font-semibold leading-8 text-[#101828]">Bitácora de revisión del presupuesto</h1>
+                <p className="mt-2 text-base leading-6 text-apGray-500">Historial de observaciones y ajustes realizados durante la revisión del presupuesto.</p>
+              </section>
+
+              <section className="flex flex-col gap-5">
+                {events.map((event) => {
+                  const eventType = eventTypes[event.type];
+
+                  return (
+                  <article className="rounded-md border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]" key={`${event.time}-${event.title}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${eventType.className}`} aria-hidden="true">
+                        {eventType.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium leading-5 text-apGray-500">{event.time}</p>
+                        </div>
+                        <h2 className="mt-1 text-lg font-semibold leading-7 text-[#101828]">{event.title}</h2>
+                      </div>
+                    </div>
+                    {event.items.length > 0 && (
+                      <div className="mt-4 flex flex-col divide-y divide-[#e5e7eb]">
+                        {event.items.map((item) => (
+                          <div className="py-3 first:pt-0 last:pb-0" key={item.name}>
+                            <p className="text-base font-semibold leading-6 text-apGray-800">{item.name}</p>
+                            {item.text && <p className="mt-1 text-sm leading-5 text-apGray-600">“{item.text}”</p>}
+                            {item.detail && (
+                              <div className="mt-1 text-sm leading-5 text-apGray-600">
+                                {item.detail.map((line) => <p key={line}>{line}</p>)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                  );
+                })}
+              </section>
+            </div>
+          </main>
+        );
+      }
+
+      const editRows = [
+        {
+          id: "paint-wall",
+          repair: "Pintura de pared",
+          unit: "gl",
+          quantity: "1",
+          unitPrice: "550000",
+          subtotal: "$550.000",
+        },
+        {
+          id: "kitchen-door",
+          repair: "Ajuste puerta mueble cocina",
+          note: "La puerta no se ve tan desalineada, ¿es necesario este ajuste?",
+          unit: "c/u",
+          quantity: "2",
+          unitPrice: "15000",
+          subtotal: "$30.000",
+        },
+        {
+          id: "silicone-counter",
+          repair: "Sellado de silicona en encimera",
+          note: "¿Se puede hacer un sellado más simple en lugar de una reparación mayor?",
+          unit: "ml",
+          quantity: "5",
+          unitPrice: "4000",
+          subtotal: "$20.000",
+        },
+        {
+          id: "bath-seals",
+          repair: "Cambio sellos baño",
+          unit: "c/u",
+          quantity: "1",
+          unitPrice: "30000",
+          subtotal: "$30.000",
+        },
+      ];
+
+      function createQuotationRows() {
+        return editRows.map((row) => ({
+          ...row,
+          status: "active",
+          original: {
+            quantity: row.quantity,
+            unitPrice: row.unitPrice,
+            status: "active",
+          },
+        }));
+      }
+
+      function cloneQuotationRows(rows) {
+        return rows.map((row) => ({
+          ...row,
+          original: { ...row.original },
+        }));
+      }
+
+      function parseAmount(value) {
+        const parsed = Number(String(value).replace(/[^\d.-]/g, ""));
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function formatCurrency(value) {
+        return `$${Math.round(value).toLocaleString("es-CL")}`;
+      }
+
+      function getRowSubtotal(row) {
+        return parseAmount(row.quantity) * parseAmount(row.unitPrice);
+      }
+
+      function buildEditedItems(rows) {
+        return rows.flatMap((row) => {
+          const changes = [];
+          if (row.status === "deleted") {
+            return changes;
+          }
+          if (String(row.quantity) !== String(row.original.quantity)) {
+            changes.push({
+              name: row.repair,
+              type: "edited",
+              field: "quantity",
+              oldValue: parseAmount(row.original.quantity),
+              newValue: parseAmount(row.quantity),
+            });
+          }
+          if (String(row.unitPrice) !== String(row.original.unitPrice)) {
+            changes.push({
+              name: row.repair,
+              type: "edited",
+              field: "price",
+              oldValue: parseAmount(row.original.unitPrice),
+              newValue: parseAmount(row.unitPrice),
+            });
+          }
+          return changes;
+        });
+      }
+
+      function getSummaryChanges(editedItems, deletedItems) {
+        const grouped = editedItems.reduce((acc, item) => {
+          acc[item.name] = acc[item.name] || new Set();
+          acc[item.name].add(item.field);
+          return acc;
+        }, {});
+
+        const edited = Object.entries(grouped).map(([name, fields]) => {
+          const hasQuantity = fields.has("quantity");
+          const hasPrice = fields.has("price");
+          const label = hasQuantity && hasPrice
+            ? "cantidad y precio ajustados"
+            : hasPrice
+              ? "precio ajustado"
+              : "cantidad ajustada";
+          return `${name}: ${label}`;
+        });
+
+        return [
+          ...edited,
+          ...deletedItems.map((item) => `${item.name}: ítem eliminado`),
+        ];
+      }
+
+      function buildDeletedItems(rows) {
+        return rows
+          .filter((row) => row.status === "deleted" && row.original.status !== "deleted")
+          .map((row) => ({ name: row.repair, type: "deleted" }));
+      }
+
+      function EditableNumber({ value, className = "", onChange, dataPriceInput, disabled = false }) {
+        return (
+          <input
+            className={`h-[30px] rounded border border-[#d1d5dc] px-2 py-1 text-sm leading-5 text-[#0a0a0a] outline-none disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#6b7280] ${className}`}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            inputMode="numeric"
+            type="number"
+            data-price-input={dataPriceInput}
+            disabled={disabled}
+          />
+        );
+      }
+
+      function EditQuotationTable({ rows, onChangeRow, onToggleDeleteRow, onOpenObservation, subtotal }) {
+        return (
+          <div className="overflow-hidden rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb]">
+            <table className="w-full table-fixed text-left text-sm text-[#101828]">
+              <colgroup>
+                <col className="w-[47%]" />
+                <col className="w-[8%]" />
+                <col className="w-[12%]" />
+                <col className="w-[17%]" />
+                <col className="w-[12%]" />
+                <col className="w-[4%]" />
+              </colgroup>
+              <thead className="bg-[#f3f4f6] text-sm font-semibold leading-5">
+                <tr>
+                  <th className="px-4 py-3">Reparación</th>
+                  <th className="px-4 py-3">Unidad</th>
+                  <th className="px-4 py-3 text-right">Cantidad</th>
+                  <th className="px-4 py-3 text-right">Precio unitario</th>
+                  <th className="px-4 py-3 text-right">Subtotal</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {rows.map((row) => {
+                  const isDeleted = row.status === "deleted";
+                  const isEdited = row.status === "edited";
+                  const mutedText = isDeleted ? "text-[#6b7280] line-through" : "";
+
+                  return (
+                  <tr key={row.id} className={`border-b border-[#e5e7eb] ${isEdited ? "border-l-4 border-l-[#facc15] bg-[#fffbeb]" : ""} ${isDeleted ? "bg-[#fef2f2] opacity-60" : ""}`}>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className={`font-medium leading-5 ${mutedText}`}>{row.repair}</p>
+                        {isEdited && <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[#92400e]">Editado</span>}
+                        {isDeleted && <span className="rounded-full bg-[#fee2e2] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[#b91c1c]">Eliminado</span>}
+                      </div>
+                      {row.note && (
+                        <button className="mt-2 text-xs font-medium leading-5 text-[#155dfc]" type="button" onClick={() => onOpenObservation(row.id)}>
+                          Ver observación
+                        </button>
+                      )}
+                    </td>
+                    <td className={`px-4 py-3 align-middle text-[#364153] ${mutedText}`}>{row.unit}</td>
+                    <td className="px-4 py-3 align-middle text-right">
+                      <EditableNumber className={`w-20 text-left ${isDeleted ? "line-through" : ""}`} value={row.quantity} onChange={(value) => onChangeRow(row.id, "quantity", value)} disabled={isDeleted} />
+                    </td>
+                    <td className="px-4 py-3 align-middle text-right">
+                      <EditableNumber className={`w-32 text-left ${isDeleted ? "line-through" : ""}`} value={row.unitPrice} onChange={(value) => onChangeRow(row.id, "unitPrice", value)} dataPriceInput={row.id} disabled={isDeleted} />
+                    </td>
+                    <td className={`px-4 py-3 align-middle text-right font-medium ${mutedText}`}>{formatCurrency(getRowSubtotal(row))}</td>
+                    <td className="px-4 py-3 align-middle">
+                      <button
+                        className="flex h-6 w-6 items-center justify-center rounded text-lg leading-none text-[#364153]"
+                        type="button"
+                        aria-label={isDeleted ? `Deshacer eliminación de ${row.repair}` : `Eliminar ${row.repair}`}
+                        title={isDeleted ? "Deshacer eliminación" : "Eliminar ítem"}
+                        onClick={() => onToggleDeleteRow(row.id)}
+                      >
+                        {isDeleted ? "↩" : <img src={assets.trash} alt="" className="h-4 w-4" />}
+                      </button>
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-[#d1d5dc] bg-[#f9fafb] text-base font-semibold leading-6">
+                <tr>
+                  <td className="px-4 py-3 text-right" colSpan="4">Subtotal indispensables</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(subtotal)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        );
+      }
+
+      function OwnerObservationModal({ item, onClose }) {
+        if (!item) return null;
+
+        return (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+            <div className="w-full max-w-[520px] rounded-xl bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-[#e5e7eb] px-6 py-5">
+                <h2 className="text-xl font-semibold leading-7 text-[#101828]">Observación del propietario</h2>
+                <button className="flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-[#364153]" type="button" onClick={onClose} aria-label="Cerrar">
+                  ×
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-4 px-6 py-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase leading-5 text-[#6a7282]">Ítem</p>
+                  <p className="text-base font-semibold leading-6 text-[#101828]">{item.repair}</p>
+                </div>
+                <div className="rounded-lg border-l-4 border-[#d97706] bg-[#fffbeb] px-4 py-3">
+                  <p className="text-sm leading-6 text-[#364153]">{item.note}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function Toast({ message }) {
+        if (!message) return null;
+
+        return (
+          <div className="fixed right-8 top-24 z-50 rounded-lg bg-[#111827] px-4 py-3 text-sm font-medium text-white shadow-lg">
+            {message}
+          </div>
+        );
+      }
+
+      function SaveChangesModal({ editedItems, deletedItems, allItemsDeleted, comment, onCommentChange, onClose, onSaveDraft, onResend }) {
+        const changes = getSummaryChanges(editedItems, deletedItems);
+        const visibleChanges = changes.slice(0, 3);
+        const extraCount = changes.length - visibleChanges.length;
+        const canResend = comment.trim().length > 0;
+
+        return (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+            <div className="w-full max-w-[560px] rounded-xl bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-[#e5e7eb] px-6 py-5">
+                <h2 className="text-xl font-semibold leading-7 text-[#101828]">Cambios realizados</h2>
+                <button className="flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-[#364153]" type="button" onClick={onClose} aria-label="Cerrar">
+                  ×
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-5 px-6 py-5">
+                {allItemsDeleted && (
+                  <div className="rounded-md border border-[#fee685] bg-[#fffbeb] px-3 py-2 text-sm leading-5 text-[#7b3306]">
+                    Estás dejando el presupuesto sin ítems activos
+                  </div>
+                )}
+
+                <section className="rounded-lg border border-[#e5e7eb] bg-[#f9fafb] p-4">
+                  <h3 className="text-sm font-semibold leading-5 text-[#101828]">Cambios realizados</h3>
+                  <ul className="mt-3 flex flex-col gap-2 text-sm leading-5 text-[#364153]">
+                    {visibleChanges.map((change) => (
+                      <li key={change} className="flex items-start gap-2">
+                        <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#9ca3af]" />
+                        <span>{change}</span>
+                      </li>
+                    ))}
+                    {extraCount > 0 && (
+                      <li className="pl-3 font-medium text-[#6a7282]">+{extraCount} cambios adicionales</li>
+                    )}
+                  </ul>
+                </section>
+
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold leading-5 text-[#101828]">Explicación para el propietario *</span>
+                  <textarea
+                    className="h-28 resize-none rounded-lg border border-[#d1d5dc] px-4 py-3 text-sm leading-5 outline-none"
+                    value={comment}
+                    onChange={(event) => onCommentChange(event.target.value)}
+                  />
+                  <span className="text-xs leading-5 text-[#6a7282]">Este comentario será enviado junto con el presupuesto actualizado</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-[#e5e7eb] px-6 py-4">
+                <button className="h-10 rounded-lg bg-[#dbeafe] px-4 text-sm font-medium text-[#155dfc]" type="button" onClick={onSaveDraft}>Guardar borrador</button>
+                <button
+                  className="h-10 rounded-lg bg-[#155dfc] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#93c5fd]"
+                  type="button"
+                  disabled={!canResend}
+                  onClick={onResend}
+                >
+                  Reenviar presupuesto
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function EmptyOptionalTable() {
+        return (
+          <div className="overflow-hidden rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb]">
+            <table className="w-full table-fixed text-left text-sm text-[#101828]">
+              <thead className="bg-[#f3f4f6] text-sm font-semibold leading-5">
+                <tr>
+                  <th className="px-4 py-3">Reparación</th>
+                  <th className="px-4 py-3">Unidad</th>
+                  <th className="px-4 py-3 text-right">Cantidad</th>
+                  <th className="px-4 py-3 text-right">Precio unitario</th>
+                  <th className="px-4 py-3 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tfoot className="border-t-2 border-[#d1d5dc] bg-[#f9fafb] text-base font-semibold leading-6">
+                <tr>
+                  <td className="px-4 py-3 text-right" colSpan="4">Subtotal opcionales</td>
+                  <td className="px-4 py-3 text-right">$0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        );
+      }
+
+      function EditQuotationView({ onBack, savedRows, onSaveQuotation }) {
+        const [rows, setRows] = React.useState(() => cloneQuotationRows(savedRows));
+        const [toast, setToast] = React.useState("");
+        const [isModalOpen, setIsModalOpen] = React.useState(false);
+        const [observationItemId, setObservationItemId] = React.useState(null);
+        const [comment, setComment] = React.useState("");
+        const [successBanner, setSuccessBanner] = React.useState("");
+
+        const observationItem = rows.find((row) => row.id === observationItemId);
+        const editedItems = buildEditedItems(rows);
+        const deletedItems = buildDeletedItems(rows);
+        const hasChanges = editedItems.length > 0 || deletedItems.length > 0;
+        const activeRows = rows.filter((row) => row.status !== "deleted");
+        const subtotal = activeRows.reduce((total, row) => total + getRowSubtotal(row), 0);
+        const iva = subtotal * 0.19;
+        const total = subtotal + iva;
+        const allItemsDeleted = activeRows.length === 0 && deletedItems.length > 0;
+
+        const showToast = (message) => {
+          setToast(message);
+          window.setTimeout(() => setToast(""), 2400);
+        };
+
+        const handleChangeRow = (id, field, value) => {
+          setRows((currentRows) => currentRows.map((row) => (
+            row.id === id
+              ? {
+                  ...row,
+                  [field]: value,
+                  status: String(field === "quantity" ? value : row.quantity) !== String(row.original.quantity) ||
+                    String(field === "unitPrice" ? value : row.unitPrice) !== String(row.original.unitPrice)
+                    ? "edited"
+                    : "active",
+                }
+              : row
+          )));
+          setSuccessBanner("");
+        };
+
+        const handleToggleDeleteRow = (id) => {
+          setRows((currentRows) => currentRows.map((row) => {
+            if (row.id !== id) return row;
+            if (row.status === "deleted") {
+              showToast("Eliminación deshecha");
+              setSuccessBanner("");
+              return {
+                ...row,
+                quantity: row.original.quantity,
+                unitPrice: row.original.unitPrice,
+                status: "active",
+              };
+            }
+
+            showToast("Ítem eliminado");
+            setSuccessBanner("");
+            return {
+              ...row,
+              status: "deleted",
+            };
+          }));
+          if (observationItemId === id) {
+              setObservationItemId(null);
+          }
+        };
+
+        const handleOpenObservation = (id) => {
+          setObservationItemId(id);
+        };
+
+        const persistChanges = () => {
+          setRows((currentRows) => currentRows.map((row) => ({
+            ...row,
+            status: row.status,
+            original: {
+              quantity: row.quantity,
+              unitPrice: row.unitPrice,
+              status: row.status,
+            },
+          })));
+        };
+
+        const handleSaveDraft = () => {
+          onSaveQuotation(rows);
+          setIsModalOpen(false);
+          showToast("Cambios guardados como borrador");
+        };
+
+        const handleResend = () => {
+          onSaveQuotation(rows);
+          persistChanges();
+          setIsModalOpen(false);
+          setComment("");
+          setSuccessBanner("Presupuesto actualizado y enviado al propietario");
+        };
+
+        return (
+          <div className="min-h-screen bg-white pb-[104px] text-[#101828]">
+            <Toast message={toast} />
+            {isModalOpen && (
+              <SaveChangesModal
+                editedItems={editedItems}
+                deletedItems={deletedItems}
+                allItemsDeleted={allItemsDeleted}
+                comment={comment}
+                onCommentChange={setComment}
+                onClose={() => setIsModalOpen(false)}
+                onSaveDraft={handleSaveDraft}
+                onResend={handleResend}
+              />
+            )}
+            {observationItem && (
+              <OwnerObservationModal
+                item={observationItem}
+                onClose={() => setObservationItemId(null)}
+              />
+            )}
+
+            <header className="flex h-[89px] items-center justify-between border-b border-[#e5e7eb] bg-white px-8 py-4 shadow-sm">
+              <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-semibold leading-8">Cotización - Construcciones Bob SpA</h1>
+                <p className="text-sm leading-5 text-[#4a5565]">Presupuesto de rotación - ID 3645</p>
+              </div>
+              <button className="flex h-10 w-10 items-center justify-center rounded-full text-3xl leading-none text-[#364153]" type="button" onClick={onBack} aria-label="Cerrar">
+                ×
+              </button>
+            </header>
+
+            <div className="flex h-[47px] items-center border-b border-[#fee685] bg-[#fffbeb] px-8 text-sm leading-5 text-[#7b3306]">
+              <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full border border-[#f97316] text-xs text-[#f97316]">!</span>
+              Estás editando esta cotización debido a observaciones del propietario.
+            </div>
+
+            <main className="mx-auto flex w-[1152px] flex-col gap-8 px-8 pt-8">
+              {successBanner && (
+                <div className="rounded-lg border border-[#86efac] bg-[#f0fdf4] px-4 py-3 text-sm font-medium leading-5 text-[#166534]">
+                  {successBanner}
+                </div>
+              )}
+
+              <section className="flex flex-col gap-4">
+                <h2 className="text-xl font-semibold leading-7">Cotización inmediata</h2>
+                <EditQuotationTable rows={rows} onChangeRow={handleChangeRow} onToggleDeleteRow={handleToggleDeleteRow} onOpenObservation={handleOpenObservation} subtotal={subtotal} />
+              </section>
+
+              <section className="flex flex-col gap-4">
+                <h2 className="text-xl font-semibold leading-7">Mejoras</h2>
+                <EmptyOptionalTable />
+              </section>
+
+              <section className="flex justify-end rounded-[10px] border border-[#bedbff] bg-[#eff6ff] px-6 py-6">
+                <div className="flex w-[430px] flex-col gap-2 text-base leading-6">
+                  <div className="flex justify-between">
+                    <p className="text-[#364153]">Neto</p>
+                    <p className="font-medium">{formatCurrency(subtotal)}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="text-[#364153]">IVA (19%)</p>
+                    <p className="font-medium">{formatCurrency(iva)}</p>
+                  </div>
+                  <div className="mt-1 flex justify-between border-t-2 border-[#8ec5ff] pt-2.5 text-lg leading-7">
+                    <p className="font-semibold">Total</p>
+                    <p className="font-bold text-[#1447e6]">{formatCurrency(total)}</p>
+                  </div>
+                </div>
+              </section>
+
+            </main>
+
+            <footer className="fixed bottom-0 left-0 flex h-[79px] w-full justify-end border-t border-[#e5e7eb] bg-white px-[136.5px] pt-[17px] shadow-[0px_-4px_6px_0px_rgba(0,0,0,0.1)]">
+              <div className="flex gap-3">
+                <button className="h-[46px] rounded-lg border border-[#d1d5dc] bg-white px-8 text-base font-medium leading-6 text-[#364153]" type="button" onClick={onBack}>Cancelar</button>
+                <button
+                  className="h-[46px] rounded-lg bg-[#155dfc] px-8 text-base font-medium leading-6 text-white disabled:cursor-not-allowed disabled:bg-[#93c5fd]"
+                  type="button"
+                  disabled={!hasChanges}
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </footer>
+          </div>
+        );
+      }
+
+      function App() {
+        const [view, setView] = React.useState("summary");
+        const [quotationRows, setQuotationRows] = React.useState(createQuotationRows);
+
+        const saveQuotationRows = (rows) => {
+          setQuotationRows(cloneQuotationRows(rows));
+        };
+
+        const openEditQuotation = () => {
+          setView("edit");
+          window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+          });
+        };
+
+        const openReviewLog = () => {
+          setView("review-log");
+          window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+          });
+        };
+
+        const openBudgetSummary = () => {
+          setView("summary");
+          window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+          });
+        };
+
+        if (view === "edit") {
+          return <EditQuotationView onBack={() => setView("summary")} savedRows={quotationRows} onSaveQuotation={saveQuotationRows} />;
+        }
+
+        return (
+          <div className="min-h-screen bg-white pb-8">
+            <div className="relative h-32 w-full overflow-hidden">
+              <img src={assets.topbar} alt="" className="absolute left-0 top-0 h-[591.41%] w-full max-w-none object-cover object-top" />
+              {view === "review-log" && (
+                <nav className="absolute left-1/2 top-[88px] flex h-[36px] w-full max-w-[1276px] -translate-x-1/2 items-center gap-2 px-6 text-sm leading-5 text-[#6b7280]" aria-label="Breadcrumb">
+                  <button className="font-medium text-[#155dfc] underline underline-offset-2" type="button" onClick={openBudgetSummary}>
+                    Presupuesto
+                  </button>
+                  <span>/</span>
+                  <span className="font-medium text-[#1f2937]">Bitácora de cambios</span>
+                </nav>
+              )}
+            </div>
+            <div className="flex flex-wrap items-start justify-center gap-6">
+              <div className="flex flex-col items-end">
+                {view === "review-log" ? (
+                  <ReviewLogDocument />
+                ) : (
+                  <BudgetDocument onEditQuotation={openEditQuotation} quotationRows={quotationRows} />
+                )}
+              </div>
+              <ActionsPanel onOpenReviewLog={openReviewLog} />
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
