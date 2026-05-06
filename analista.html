@@ -213,6 +213,18 @@
         );
       }
 
+      function SentAlert() {
+        return (
+          <div className="flex w-full items-start gap-2.5 rounded-md border border-[#86efac] bg-[#f0fdf4] p-3 text-sm leading-5 text-[#166534]">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#86efac] text-xs font-semibold">✓</span>
+            <div>
+              <p className="font-semibold">Cotización actualizada y enviada correctamente.</p>
+              <p>Los cambios realizados fueron reenviados al propietario.</p>
+            </div>
+          </div>
+        );
+      }
+
       function Divider() {
         return <div className="h-px w-full bg-[#d1d5db]" />;
       }
@@ -459,13 +471,13 @@
         );
       }
 
-      function BudgetDocument({ onEditQuotation, quotationRows }) {
+      function BudgetDocument({ onEditQuotation, quotationRows, quotationSent }) {
         const observedCount = quotationRows.filter((row) => row.note && row.status !== "deleted").length;
 
         return (
           <main className="w-[882px] shrink-0 border-8 border-apGray-300 bg-[#f5f5f5] p-8">
             <div className="flex flex-col gap-10">
-              <Alert observedCount={observedCount} onEditQuotation={onEditQuotation} />
+              {quotationSent ? <SentAlert /> : <Alert observedCount={observedCount} onEditQuotation={onEditQuotation} />}
               <div className="flex flex-col gap-6">
                 <HeaderBlock />
                 <TextBox
@@ -762,7 +774,7 @@
         );
       }
 
-      function EditQuotationTable({ rows, onChangeRow, onToggleDeleteRow, onOpenObservation, subtotal }) {
+      function EditQuotationTable({ rows, onChangeRow, onToggleDeleteRow, onOpenObservation, subtotal, readOnly = false }) {
         return (
           <div className="overflow-hidden rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb]">
             <table className="w-full table-fixed text-left text-sm text-[#101828]">
@@ -798,7 +810,7 @@
                         {isEdited && <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[#92400e]">Editado</span>}
                         {isDeleted && <span className="rounded-full bg-[#fee2e2] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[#b91c1c]">Eliminado</span>}
                       </div>
-                      {row.note && (
+                      {row.note && !readOnly && (
                         <button className="mt-2 text-xs font-medium leading-5 text-[#155dfc]" type="button" onClick={() => onOpenObservation(row.id)}>
                           Ver observación
                         </button>
@@ -806,22 +818,24 @@
                     </td>
                     <td className={`px-4 py-3 align-middle text-[#364153] ${mutedText}`}>{row.unit}</td>
                     <td className="px-4 py-3 align-middle text-right">
-                      <EditableNumber className={`w-20 text-left ${isDeleted ? "line-through" : ""}`} value={row.quantity} onChange={(value) => onChangeRow(row.id, "quantity", value)} disabled={isDeleted} />
+                      <EditableNumber className={`w-20 text-left ${isDeleted ? "line-through" : ""}`} value={row.quantity} onChange={(value) => onChangeRow(row.id, "quantity", value)} disabled={isDeleted || readOnly} />
                     </td>
                     <td className="px-4 py-3 align-middle text-right">
-                      <EditableNumber className={`w-32 text-left ${isDeleted ? "line-through" : ""}`} value={row.unitPrice} onChange={(value) => onChangeRow(row.id, "unitPrice", value)} dataPriceInput={row.id} disabled={isDeleted} />
+                      <EditableNumber className={`w-32 text-left ${isDeleted ? "line-through" : ""}`} value={row.unitPrice} onChange={(value) => onChangeRow(row.id, "unitPrice", value)} dataPriceInput={row.id} disabled={isDeleted || readOnly} />
                     </td>
                     <td className={`px-4 py-3 align-middle text-right font-medium ${mutedText}`}>{formatCurrency(getRowSubtotal(row))}</td>
                     <td className="px-4 py-3 align-middle">
-                      <button
-                        className="flex h-6 w-6 items-center justify-center rounded text-lg leading-none text-[#364153]"
-                        type="button"
-                        aria-label={isDeleted ? `Deshacer eliminación de ${row.repair}` : `Eliminar ${row.repair}`}
-                        title={isDeleted ? "Deshacer eliminación" : "Eliminar ítem"}
-                        onClick={() => onToggleDeleteRow(row.id)}
-                      >
-                        {isDeleted ? "↩" : <img src={assets.trash} alt="" className="h-4 w-4" />}
-                      </button>
+                      {!readOnly && (
+                        <button
+                          className="flex h-6 w-6 items-center justify-center rounded text-lg leading-none text-[#364153]"
+                          type="button"
+                          aria-label={isDeleted ? `Deshacer eliminación de ${row.repair}` : `Eliminar ${row.repair}`}
+                          title={isDeleted ? "Deshacer eliminación" : "Eliminar ítem"}
+                          onClick={() => onToggleDeleteRow(row.id)}
+                        >
+                          {isDeleted ? "↩" : <img src={assets.trash} alt="" className="h-4 w-4" />}
+                        </button>
+                      )}
                     </td>
                   </tr>
                   );
@@ -965,7 +979,7 @@
         );
       }
 
-      function EditQuotationView({ onBack, savedRows, onSaveQuotation }) {
+      function EditQuotationView({ onBack, savedRows, onSaveQuotation, quotationSent, onResendQuotation }) {
         const [rows, setRows] = React.useState(() => cloneQuotationRows(savedRows));
         const [toast, setToast] = React.useState("");
         const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -982,6 +996,7 @@
         const iva = subtotal * 0.19;
         const total = subtotal + iva;
         const allItemsDeleted = activeRows.length === 0 && deletedItems.length > 0;
+        const readOnly = quotationSent;
 
         const showToast = (message) => {
           setToast(message);
@@ -989,6 +1004,7 @@
         };
 
         const handleChangeRow = (id, field, value) => {
+          if (readOnly) return;
           setRows((currentRows) => currentRows.map((row) => (
             row.id === id
               ? {
@@ -1005,6 +1021,7 @@
         };
 
         const handleToggleDeleteRow = (id) => {
+          if (readOnly) return;
           setRows((currentRows) => currentRows.map((row) => {
             if (row.id !== id) return row;
             if (row.status === "deleted") {
@@ -1031,6 +1048,7 @@
         };
 
         const handleOpenObservation = (id) => {
+          if (readOnly) return;
           setObservationItemId(id);
         };
 
@@ -1054,6 +1072,7 @@
 
         const handleResend = () => {
           onSaveQuotation(rows);
+          onResendQuotation();
           persistChanges();
           setIsModalOpen(false);
           setComment("");
@@ -1092,13 +1111,20 @@
               </button>
             </header>
 
-            <div className="flex h-[47px] items-center border-b border-[#fee685] bg-[#fffbeb] px-8 text-sm leading-5 text-[#7b3306]">
-              <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full border border-[#f97316] text-xs text-[#f97316]">!</span>
-              Estás editando esta cotización debido a observaciones del propietario.
-            </div>
+            {readOnly ? (
+              <div className="flex h-[47px] items-center border-b border-[#86efac] bg-[#f0fdf4] px-8 text-sm leading-5 text-[#166534]">
+                <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full border border-[#86efac] text-xs font-semibold">✓</span>
+                Los cambios realizados fueron reenviados al propietario.
+              </div>
+            ) : (
+              <div className="flex h-[47px] items-center border-b border-[#fee685] bg-[#fffbeb] px-8 text-sm leading-5 text-[#7b3306]">
+                <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full border border-[#f97316] text-xs text-[#f97316]">!</span>
+                Estás editando esta cotización debido a observaciones del propietario.
+              </div>
+            )}
 
             <main className="mx-auto flex w-[1152px] flex-col gap-8 px-8 pt-8">
-              {successBanner && (
+              {successBanner && !readOnly && (
                 <div className="rounded-lg border border-[#86efac] bg-[#f0fdf4] px-4 py-3 text-sm font-medium leading-5 text-[#166534]">
                   {successBanner}
                 </div>
@@ -1106,7 +1132,7 @@
 
               <section className="flex flex-col gap-4">
                 <h2 className="text-xl font-semibold leading-7">Cotización inmediata</h2>
-                <EditQuotationTable rows={rows} onChangeRow={handleChangeRow} onToggleDeleteRow={handleToggleDeleteRow} onOpenObservation={handleOpenObservation} subtotal={subtotal} />
+                <EditQuotationTable rows={rows} onChangeRow={handleChangeRow} onToggleDeleteRow={handleToggleDeleteRow} onOpenObservation={handleOpenObservation} subtotal={subtotal} readOnly={readOnly} />
               </section>
 
               <section className="flex flex-col gap-4">
@@ -1136,14 +1162,16 @@
             <footer className="fixed bottom-0 left-0 flex h-[79px] w-full justify-end border-t border-[#e5e7eb] bg-white px-[136.5px] pt-[17px] shadow-[0px_-4px_6px_0px_rgba(0,0,0,0.1)]">
               <div className="flex gap-3">
                 <button className="h-[46px] rounded-lg border border-[#d1d5dc] bg-white px-8 text-base font-medium leading-6 text-[#364153]" type="button" onClick={onBack}>Cancelar</button>
-                <button
-                  className="h-[46px] rounded-lg bg-[#155dfc] px-8 text-base font-medium leading-6 text-white disabled:cursor-not-allowed disabled:bg-[#93c5fd]"
-                  type="button"
-                  disabled={!hasChanges}
-                  onClick={() => setIsModalOpen(true)}
-                >
-                  Guardar cambios
-                </button>
+                {!readOnly && (
+                  <button
+                    className="h-[46px] rounded-lg bg-[#155dfc] px-8 text-base font-medium leading-6 text-white disabled:cursor-not-allowed disabled:bg-[#93c5fd]"
+                    type="button"
+                    disabled={!hasChanges}
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    Guardar cambios
+                  </button>
+                )}
               </div>
             </footer>
           </div>
@@ -1153,9 +1181,14 @@
       function App() {
         const [view, setView] = React.useState("summary");
         const [quotationRows, setQuotationRows] = React.useState(createQuotationRows);
+        const [quotationSent, setQuotationSent] = React.useState(false);
 
         const saveQuotationRows = (rows) => {
           setQuotationRows(cloneQuotationRows(rows));
+        };
+
+        const markQuotationSent = () => {
+          setQuotationSent(true);
         };
 
         const openEditQuotation = () => {
@@ -1180,7 +1213,7 @@
         };
 
         if (view === "edit") {
-          return <EditQuotationView onBack={() => setView("summary")} savedRows={quotationRows} onSaveQuotation={saveQuotationRows} />;
+          return <EditQuotationView onBack={() => setView("summary")} savedRows={quotationRows} onSaveQuotation={saveQuotationRows} quotationSent={quotationSent} onResendQuotation={markQuotationSent} />;
         }
 
         return (
@@ -1202,7 +1235,7 @@
                 {view === "review-log" ? (
                   <ReviewLogDocument />
                 ) : (
-                  <BudgetDocument onEditQuotation={openEditQuotation} quotationRows={quotationRows} />
+                  <BudgetDocument onEditQuotation={openEditQuotation} quotationRows={quotationRows} quotationSent={quotationSent} />
                 )}
               </div>
               <ActionsPanel onOpenReviewLog={openReviewLog} />
